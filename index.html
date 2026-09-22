@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checking & Savings Simulator</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#1f2937;--muted:#667085;--line:#e5e7eb;--accent:#2563eb;--good:#047857;--warn:#b45309;--bad:#b42318;--shadow:0 10px 28px rgba(15,23,42,.08)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1050px;margin:0 auto;padding:28px 18px 60px}.hero{background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;border-radius:22px;padding:30px;box-shadow:var(--shadow)}.hero h1{margin:0 0 8px;font-size:clamp(28px,5vw,46px)}.hero p{margin:0;max-width:780px;color:#dbeafe;line-height:1.6}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);margin-top:18px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}
+label{font-weight:800;font-size:14px}input,select,textarea{width:100%;border:1px solid #cfd4dc;border-radius:12px;padding:12px 13px;font:inherit;background:#fff;color:var(--ink)}textarea{min-height:105px;resize:vertical}
+.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:800;font-size:15px;cursor:pointer;background:var(--accent);color:#fff}.btn.secondary{background:#111827}.btn.ghost{background:#eef2ff;color:#1e40af}.btn:disabled{opacity:.45;cursor:not-allowed}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center}.stat .n{font-size:26px;font-weight:900}.stat .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.progress{height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:18px 0}.progress>div{height:100%;background:var(--accent);width:0;transition:.25s}.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.choice{border:1px solid var(--line);border-radius:14px;padding:15px;background:#fff;cursor:pointer;text-align:left}.choice:hover{border-color:#93c5fd}.choice.selected{border:2px solid var(--accent);background:#eff6ff}.choice h3{font-size:16px;margin:0 0 6px}.choice p{font-size:13px;color:var(--muted);line-height:1.45;margin:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.hidden{display:none}.notice{padding:11px 13px;border-radius:10px;background:#fff7ed;color:#9a3412;font-size:14px;margin-top:10px}.feedback{margin-top:14px;padding:14px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;line-height:1.55}.small{font-size:13px;color:var(--muted);line-height:1.5}.record{border-top:1px solid var(--line);padding:12px 0}.report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.report-box{padding:14px;border:1px solid var(--line);border-radius:12px}.score{font-size:32px;font-weight:900}.footer{margin-top:26px;text-align:center;color:var(--muted);font-size:13px}
+@media(max-width:760px){.grid,.stats,.choices,.report-grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
+@media print{body{background:#fff}.hero,#setup,#simulation .stats,.progress,#simActions,.footer{display:none!important}.card{box-shadow:none;break-inside:avoid}.wrap{max-width:none;padding:0}.hidden{display:block}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section class="hero">
+<h1>Checking & Savings Simulator</h1>
+<p>Practice choosing accounts, comparing savings features, understanding compound interest, and deciding when to use checking, savings, CDs, and money market accounts.</p>
+</section>
+
+<section id="setup" class="card">
+<h2>Student Setup</h2>
+<div class="grid">
+<div class="field"><label for="student">Student Name</label><input id="student" placeholder="Enter your name"></div>
+<div class="field"><label for="goal">Savings Goal</label><select id="goal"><option>Emergency Fund</option><option>Car</option><option>College</option><option>Travel</option><option>General Savings</option></select></div>
+</div>
+<p class="small">You will start with <strong>$2,400</strong> in total money. Some decisions affect your checking balance, savings balance, interest earned, and score.</p>
+<div class="row"><button class="btn" onclick="startSim()">Start Simulator</button></div>
+</section>
+
+<section id="simulation" class="hidden">
+<div class="stats">
+<div class="stat"><div id="checking" class="n">$1,200</div><div class="l">Checking</div></div>
+<div class="stat"><div id="savings" class="n">$1,200</div><div class="l">Savings</div></div>
+<div class="stat"><div id="interest" class="n">$0</div><div class="l">Interest Earned</div></div>
+<div class="stat"><div id="score" class="n">0</div><div class="l">Smart Money Score</div></div>
+</div>
+<div class="progress"><div id="bar"></div></div>
+
+<section class="card">
+<div class="small" id="roundLabel"></div>
+<h2 id="title"></h2>
+<p id="scenario"></p>
+<div id="choices" class="choices"></div>
+<div class="field">
+<label for="reason">Explain your reasoning (minimum 15 characters)</label>
+<textarea id="reason" placeholder="Why did you choose this option?"></textarea>
+</div>
+<div id="warning" class="notice hidden">Choose an option and explain your reasoning before continuing.</div>
+<div id="feedback" class="feedback hidden"></div>
+<div id="simActions" class="row" style="margin-top:14px">
+<button id="commitBtn" class="btn" onclick="commitChoice()">Commit Decision</button>
+<button id="nextBtn" class="btn secondary hidden" onclick="nextRound()">Next</button>
+<button class="btn ghost" onclick="restart()">Restart</button>
+</div>
+</section>
+</section>
+
+<section id="report" class="card hidden">
+<h2>Final Report</h2>
+<div id="reportSummary" class="report-grid"></div>
+<h3>Decision Record</h3>
+<div id="decisionRecord"></div>
+<div class="field">
+<label for="reflection">Final Reflection</label>
+<textarea id="reflection" placeholder="What did you learn about checking, savings, compound interest, and account choice?"></textarea>
+</div>
+<div class="row" style="margin-top:14px"><button class="btn secondary" onclick="window.print()">Print / Save as PDF</button><button class="btn ghost" onclick="restart()">Run Again</button></div>
+</section>
+
+<div class="footer">Personal Finance • Checking & Savings Simulator</div>
+</div>
+
+<script>
+const rounds=[
+{
+ title:"Checking vs. Savings",
+ scenario:"You receive a $900 paycheck. You need money available for everyday spending, but you also want to build your emergency fund. What should you do?",
+ choices:[
+  {name:"Put all $900 in checking",desc:"Easy to spend, but none of it is moved toward savings.",correct:false,delta:{checking:900,savings:0,interest:0,score:0},feedback:"Checking is useful for frequent spending, but a savings account is designed to hold money you want to set aside and often earns interest."},
+  {name:"Split $600 checking / $300 savings",desc:"Keep money for bills while adding to savings.",correct:true,delta:{checking:600,savings:300,interest:0,score:10},feedback:"Good choice. Checking is useful for transactions, while savings is better for money you want to set aside and potentially earn interest on."},
+  {name:"Put all $900 in savings",desc:"Maximize savings, but leave nothing for regular bills.",correct:false,delta:{checking:0,savings:900,interest:0,score:3},feedback:"Saving is important, but checking is generally more practical for frequent purchases and bill payments."}
+ ]
+},
+{
+ title:"Choosing a Savings Account",
+ scenario:"You compare three savings accounts. Which feature combination is most attractive for a typical saver?",
+ choices:[
+  {name:"0.10% APY + $12 monthly fee",desc:"Low rate and recurring fee.",correct:false,delta:{checking:0,savings:-12,interest:1,score:0},feedback:"Fees can reduce your savings, and a low interest rate limits growth."},
+  {name:"3.75% APY + no monthly fee",desc:"Higher rate with no monthly fee.",correct:true,delta:{checking:0,savings:0,interest:18,score:10},feedback:"A higher APY and avoiding unnecessary account fees can help savings grow more effectively."},
+  {name:"1.00% APY + $5 monthly fee",desc:"Moderate rate with a recurring fee.",correct:false,delta:{checking:0,savings:-5,interest:5,score:2},feedback:"This may be better than some options, but fees still reduce what you keep."}
+ ]
+},
+{
+ title:"Compound Interest",
+ scenario:"You have $2,000 to save for several years. Which approach gives compound interest the most time and opportunity to work?",
+ choices:[
+  {name:"Start now at the highest reasonable rate you can find",desc:"Deposit early and let interest build over time.",correct:true,delta:{checking:0,savings:0,interest:40,score:10},feedback:"Starting earlier gives compounding more time to work. A higher interest rate also increases the amount earned."},
+  {name:"Wait until rates reach 5%",desc:"Delay saving until rates are much higher.",correct:false,delta:{checking:0,savings:0,interest:0,score:0},feedback:"Waiting sacrifices time. Compound interest benefits from both time and rate."},
+  {name:"Choose any low-rate account as long as you start now",desc:"Time matters, but rate also matters.",correct:false,delta:{checking:0,savings:0,interest:8,score:4},feedback:"Starting early helps, but choosing a stronger interest rate can improve growth."}
+ ]
+},
+{
+ title:"Savings Account or CD?",
+ scenario:"You have $1,500 that you will not need for one year. A CD offers a higher rate, but the money should remain untouched for the term. What is the better fit?",
+ choices:[
+  {name:"CD",desc:"Lock the money for the set term in exchange for a potentially higher rate.",correct:true,delta:{checking:0,savings:0,interest:30,score:10},feedback:"A CD can fit money you do not need to access during the term, especially when it offers a higher rate."},
+  {name:"Checking account",desc:"Keep it fully available for spending.",correct:false,delta:{checking:1500,savings:-1500,interest:0,score:0},feedback:"Checking is designed more for frequent transactions than long-term saving."},
+  {name:"Keep cash at home",desc:"No account, no interest.",correct:false,delta:{checking:0,savings:-1500,interest:0,score:0},feedback:"Keeping cash at home does not provide account interest and reduces the benefits of using a savings vehicle."}
+ ]
+},
+{
+ title:"Unexpected Expense",
+ scenario:"Your car needs a $450 repair. You have enough in both accounts. Which account is usually the better source for this kind of emergency expense?",
+ choices:[
+  {name:"Use savings",desc:"Use money set aside for unexpected expenses.",correct:true,delta:{checking:0,savings:-450,interest:0,score:10},feedback:"An emergency fund in savings is intended for unexpected expenses like this."},
+  {name:"Overdraw checking",desc:"Spend more than is available and risk fees.",correct:false,delta:{checking:-450,savings:0,interest:0,score:0},feedback:"Overdrafts can trigger fees. Using available savings is generally more appropriate for an emergency."},
+  {name:"Ignore the repair",desc:"Keep all your money but leave the problem unresolved.",correct:false,delta:{checking:0,savings:0,interest:0,score:0},feedback:"An emergency fund exists so necessary unexpected expenses can be handled without relying on overdrafts."}
+ ]
+},
+{
+ title:"Final Account Match",
+ scenario:"You want an account for regular debit-card purchases and direct deposit. Which account is the best match?",
+ choices:[
+  {name:"Checking account",desc:"Designed for frequent transactions and payments.",correct:true,delta:{checking:0,savings:0,interest:0,score:10},feedback:"Checking accounts are typically best suited for frequent purchases, bill payments, debit-card use, and direct deposit."},
+  {name:"Certificate of Deposit",desc:"Designed for money you can leave untouched for a set period.",correct:false,delta:{checking:0,savings:0,interest:0,score:0},feedback:"A CD is a savings vehicle with a set term, not an everyday spending account."},
+  {name:"Savings account",desc:"Better for setting money aside and earning interest.",correct:false,delta:{checking:0,savings:0,interest:0,score:3},feedback:"Savings is useful for money you want to set aside, but checking is better for frequent transactions."}
+ ]
+}
+];
+
+let state={checking:1200,savings:1200,interest:0,score:0,round:0,selected:null,records:[],student:"",goal:""};
+
+function money(n){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n)}
+
+function startSim(){
+ const student=document.getElementById("student").value.trim();
+ if(!student){alert("Please enter your name.");return}
+ state.student=student;
+ state.goal=document.getElementById("goal").value;
+ document.getElementById("setup").classList.add("hidden");
+ document.getElementById("simulation").classList.remove("hidden");
+ renderRound(); updateStats();
+}
+
+function renderRound(){
+ const r=rounds[state.round];
+ state.selected=null;
+ document.getElementById("roundLabel").textContent="Scenario "+(state.round+1)+" of "+rounds.length;
+ document.getElementById("title").textContent=r.title;
+ document.getElementById("scenario").textContent=r.scenario;
+ document.getElementById("reason").value="";
+ document.getElementById("warning").classList.add("hidden");
+ document.getElementById("feedback").classList.add("hidden");
+ document.getElementById("feedback").textContent="";
+ document.getElementById("commitBtn").classList.remove("hidden");
+ document.getElementById("nextBtn").classList.add("hidden");
+ document.getElementById("bar").style.width=((state.round)/rounds.length*100)+"%";
+ const c=document.getElementById("choices"); c.innerHTML="";
+ r.choices.forEach((ch,i)=>{
+  const el=document.createElement("button");
+  el.type="button"; el.className="choice";
+  el.innerHTML="<h3>"+ch.name+"</h3><p>"+ch.desc+"</p>";
+  el.onclick=()=>selectChoice(i,el);
+  c.appendChild(el);
+ });
+}
+
+function selectChoice(i,el){
+ state.selected=i;
+ [...document.querySelectorAll(".choice")].forEach(x=>x.classList.remove("selected"));
+ el.classList.add("selected");
+}
+
+function commitChoice(){
+ const reason=document.getElementById("reason").value.trim();
+ if(state.selected===null||reason.length<15){
+  document.getElementById("warning").classList.remove("hidden"); return;
+ }
+ const round=rounds[state.round], ch=round.choices[state.selected], d=ch.delta;
+ state.checking+=d.checking||0;
+ state.savings+=d.savings||0;
+ state.interest+=d.interest||0;
+ state.score+=d.score||0;
+ state.records.push({round:round.title,choice:ch.name,reason:reason,correct:ch.correct,feedback:ch.feedback});
+ updateStats();
+ document.getElementById("feedback").textContent=ch.feedback;
+ document.getElementById("feedback").classList.remove("hidden");
+ document.getElementById("commitBtn").classList.add("hidden");
+ document.getElementById("nextBtn").classList.remove("hidden");
+ [...document.querySelectorAll(".choice")].forEach(x=>x.disabled=true);
+ document.getElementById("reason").disabled=true;
+}
+
+function nextRound(){
+ state.round++;
+ document.getElementById("reason").disabled=false;
+ if(state.round>=rounds.length){finish()} else {renderRound()}
+}
+
+function updateStats(){
+ document.getElementById("checking").textContent=money(state.checking);
+ document.getElementById("savings").textContent=money(state.savings);
+ document.getElementById("interest").textContent=money(state.interest);
+ document.getElementById("score").textContent=state.score;
+}
+
+function finish(){
+ document.getElementById("simulation").classList.add("hidden");
+ document.getElementById("report").classList.remove("hidden");
+ const pct=Math.round((state.score/60)*100);
+ document.getElementById("reportSummary").innerHTML=
+ '<div class="report-box"><strong>Student</strong><br>'+escapeHtml(state.student)+'</div>'+
+ '<div class="report-box"><strong>Savings Goal</strong><br>'+escapeHtml(state.goal)+'</div>'+
+ '<div class="report-box"><strong>Final Checking</strong><br>'+money(state.checking)+'</div>'+
+ '<div class="report-box"><strong>Final Savings</strong><br>'+money(state.savings)+'</div>'+
+ '<div class="report-box"><strong>Interest Earned</strong><br>'+money(state.interest)+'</div>'+
+ '<div class="report-box"><strong>Smart Money Score</strong><br><span class="score">'+state.score+'/60 ('+pct+'%)</span></div>';
+ document.getElementById("decisionRecord").innerHTML=state.records.map((r,i)=>
+ '<div class="record"><strong>'+(i+1)+'. '+escapeHtml(r.round)+'</strong><br>'+
+ '<span><strong>Choice:</strong> '+escapeHtml(r.choice)+'</span>'+
+ '<p><strong>Your reasoning:</strong> '+escapeHtml(r.reason)+'</p>'+
+ '<p class="small"><strong>Feedback:</strong> '+escapeHtml(r.feedback)+'</p></div>').join("");
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function restart(){location.reload()}
+</script>
+</body>
+</html>
